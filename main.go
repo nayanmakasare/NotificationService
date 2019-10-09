@@ -1,9 +1,11 @@
 package main
 
 import (
+	"context"
 	"github.com/micro/go-micro"
 	"github.com/micro/go-micro/service/grpc"
 	"github.com/micro/go-micro/util/log"
+	NotificationService "github.com/nayanmakasare/NotificationService/proto"
 	"github.com/streadway/amqp"
 )
 
@@ -27,10 +29,10 @@ func main(){
 	}
 	defer ch.Close()
 
-	rabbitSubscriber := NotificationServiceSubscriber{rabbitChannel:ch}
+	rabbitSubscriber := NotificationServiceSubscriber{RabbitChannel:ch}
 
 	//Register Subscriber
-	err = micro.RegisterSubscriber("notify", service.Server(), rabbitSubscriber)
+	err = micro.RegisterSubscriber("notify", service.Server(), &rabbitSubscriber)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -38,6 +40,22 @@ func main(){
 	if err := service.Run(); err != nil {
 		log.Fatal(err)
 	}
+}
+
+type NotificationServiceSubscriber struct {
+	RabbitChannel *amqp.Channel
+}
+
+func(nss *NotificationServiceSubscriber) NotificationEvent(ctx context.Context, messageToPublish *NotificationService.MessageToPublish) error{
+	return nss.RabbitChannel.Publish(
+		messageToPublish.ExchangeName, //exchange
+		messageToPublish.RoutingKeyName, //routing key
+		false, //mandatory
+		false, //immediate
+		amqp.Publishing {
+			ContentType: "text/plain",
+			Body: messageToPublish.MessageTosend,
+		})
 }
 
 
