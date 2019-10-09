@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+package NotificationService;
+
+
+message MessageToPublish{
+    string exchangeName = 1;
+    string routingKeyName = 2;
+    bytes messageTosend = 3;
+}
